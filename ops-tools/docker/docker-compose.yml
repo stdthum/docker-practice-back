@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: ./images/app/
+      dockerfile: Dockerfile
+    tty: true
+    working_dir: /home/app
+    command:  >
+      sh -c "
+        while ! nc -z db 5432;
+        do
+          echo sleeping;
+          sleep 1;
+        done;
+        mvn -f /home/app/pom.xml clean compile dependency:resolve spring-boot:run;
+      "
+    volumes:
+      - ../../:/home/app:Z
+    ports:
+      - 8888:8080
+    networks:
+      - docker-practice-net
+
+  rds:
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - docker-practice-net
+
+  db:
+    image: postgres:11
+    restart: always
+    environment:
+      POSTGRES_DB: school
+      POSTGRES_PASSWORD: school
+    volumes:
+      - ../../data/postgres:/var/lib/postgresql/data:Z
+      - ../../data/db-dump:/db-dump:Z
+    ports:
+      - 5432:5432
+    networks:
+      - docker-practice-net
+
+networks:
+  docker-practice-net:
